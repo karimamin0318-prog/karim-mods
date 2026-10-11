@@ -1,0 +1,34 @@
+{
+  "name": "karim-mods",
+  "description": "Karim's own Claude Code mods.",
+  "owner": {
+    "name": "Karim"
+  },
+  "plugins": [
+    {
+      "name": "done-chime",
+      "source": "./done-chime",
+      "description": "Plays a short chime when Claude finishes a longer task. /chime on|off|test|<seconds>"
+    },
+    {
+      "name": "live-files",
+      "source": "./live-files",
+      "description": "A Files pane for the desktop app: what Claude is doing right now, the files it touched, git status and a live project tree. /files opens or closes it."
+    },
+    {
+      "name": "cache-tax",
+      "source": "./cache-tax",
+      "description": "Keeps the prompt cache warm during breaks and holds a cold send on a card with clear choices. A fork of Karan Bansal's cache-tax."
+    },
+    {
+      "name": "mod-hub",
+      "source": "./mod-hub",
+      "description": "One panel for all your mods: open their views, run their commands, turn them on or off. /mods"
+    },
+    {
+      "name": "crab-buddy",
+      "source": "./crab-buddy",
+      "description": "A little Claude crab above the prompt: types on a laptop while Claude works, plays around when idle. /crab"
+    }
+  ]
+}

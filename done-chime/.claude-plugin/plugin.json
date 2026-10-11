@@ -1,0 +1,6 @@
+{
+  "name": "done-chime",
+  "version": "0.1.2",
+  "description": "Plays a short chime when Claude finishes a longer task. /chime on|off|test|<seconds>",
+  "author": { "name": "Karim" }
+}

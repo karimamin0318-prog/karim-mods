@@ -1,0 +1,7 @@
+{
+  "name": "live-files",
+  "version": "0.1.0",
+  "description": "A Files pane for the desktop app: what Claude is doing right now, the files it touched, git status and a live project tree. /files opens or closes it.",
+  "author": { "name": "Karim" },
+  "types": "./types/index.d.ts"
+}
