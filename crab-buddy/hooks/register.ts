@@ -117,6 +117,8 @@ const BLURB: Record<(typeof MOVES)[number], string> = {
   kamehameha: 'fires a Kamehameha', saiyan: 'goes Super Saiyan', pistol: 'Gomu Gomu Pistol', water: 'Water Breathing', jojo: 'strikes a JoJo pose',
   ramen: 'eats Ichiraku ramen', sharingan: 'Sharingan eyes', sailor: 'Sailor transformation', onigiri: 'snacks an onigiri', totoro: 'Totoro umbrella',
   titan: 'turns into a Titan', ghoul: 'awakens as a ghoul', bankai: 'Bankai and a hollow mask', stand: 'fights DIO with its Stand',
+  thunder: 'Thunderclap and Flash', domain: 'Domain Expansion: Infinite Void', onepunch: 'one punch', smash: 'Detroit Smash', jajanken: 'Jajanken rock',
+  chainsaw: 'turns into Chainsaw Man', deathnote: 'writes in a Death Note', fusion: 'does the fusion dance', noface: 'meets No-Face', odm: 'swings on ODM gear',
   chill: 'takes a chill break', naruto: 'Naruto runs',
 }
 

@@ -2,7 +2,8 @@
 
 export const CLASSIC = ['weights', 'rasengan', 'clones', 'ball', 'dance', 'nap'] as const
 export const ANIME = ['kamehameha', 'saiyan', 'pistol', 'water', 'jojo', 'ramen', 'sharingan', 'sailor', 'onigiri', 'totoro', 'titan', 'ghoul', 'bankai', 'stand'] as const
-export const TRICKS = [...CLASSIC, ...ANIME] as const
+export const ANIME2 = ['thunder', 'domain', 'onepunch', 'smash', 'jajanken', 'chainsaw', 'deathnote', 'fusion', 'noface', 'odm'] as const
+export const TRICKS = [...CLASSIC, ...ANIME, ...ANIME2] as const
 export type Trick = (typeof TRICKS)[number]
 /** naruto is a run in Naruto style; chill is a short break between tricks. */
 export type Kind = Trick | 'run' | 'naruto' | 'chill' | 'work' | 'done'

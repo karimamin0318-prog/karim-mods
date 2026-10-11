@@ -6,6 +6,7 @@
 
 import { at, BASE, CH, clampX, CONFETTI, crab, CW, EYE, H, INK, label, ORANGE, puff, r, TOP, TRICKS, U, wrap, type Built, type Kind, type Scene, type Trick } from './kit.ts'
 import { ANIME_BUILD } from './anime.ts'
+import { ANIME2_BUILD } from './anime2.ts'
 
 export { H, CW, TRICKS, clampX, type Built, type Kind, type Scene, type Trick }
 
@@ -216,7 +217,7 @@ function work(s: Scene, W: number): Built {
 }
 
 
-const BUILD: Record<Kind, (s: Scene, W: number) => Built> = { run, naruto: run, chill, weights, rasengan, clones, ball, dance, nap, done, work, ...ANIME_BUILD }
+const BUILD: Record<Kind, (s: Scene, W: number) => Built> = { run, naruto: run, chill, weights, rasengan, clones, ball, dance, nap, done, work, ...ANIME_BUILD, ...ANIME2_BUILD }
 
 /** Builds a scene laid out W wide and drawn k times bigger. */
 export function build(s: Scene, W: number, k = 1): Built {
