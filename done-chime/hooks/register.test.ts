@@ -65,4 +65,42 @@ describe('done-chime', () => {
     await clock.settle()
     expect(runs).toHaveLength(1)
   })
+
+  test('a question or a permission ask plays the question chime once', async ($, on) => {
+    const { runs, clock } = windows(on)
+    on('tool.call', async () => ({ result: { content: 'ok' } }))
+    await $.tool.call({ tool: 'AskUserQuestion', input: { questions: [] } } as never).catch(() => {})
+    await clock.settle()
+    expect(runs).toHaveLength(1)
+    expect(runs[0]?.at(-1)).toContain('sounds\\ask.wav')
+
+    // a second signal right after is the same interruption
+    await $.tool.call({ tool: 'ExitPlanMode', input: {} } as never).catch(() => {})
+    await clock.settle()
+    expect(runs).toHaveLength(1)
+
+    await clock.advance(6_000)
+    await $.tool.call({ tool: 'ExitPlanMode', input: {} } as never).catch(() => {})
+    await clock.settle()
+    expect(runs).toHaveLength(2)
+  })
+
+  test('/chime ask off silences the question chime only', async ($, on) => {
+    const { runs, clock } = windows(on)
+    on('tool.call', async () => ({ result: { content: 'ok' } }))
+    expect((await $.command.run({ command: 'chime', args: 'ask off' } as never)).text).toBe('Question chime is off.')
+    await $.tool.call({ tool: 'AskUserQuestion', input: { questions: [] } } as never).catch(() => {})
+    await clock.settle()
+    expect(runs).toHaveLength(0)
+    await $.turn.complete(finished(20_000))
+    await clock.settle()
+    expect(runs).toHaveLength(1)
+  })
+
+  test('/chime ask test plays the question sound', async ($, on) => {
+    const { runs } = windows(on)
+    const out = await $.command.run({ command: 'chime', args: 'ask test' } as never)
+    expect(out.text).toBe('Played the question chime.')
+    expect(runs[0]?.at(-1)).toContain('sounds\\ask.wav')
+  })
 })
