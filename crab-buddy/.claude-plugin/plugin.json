@@ -1,6 +1,6 @@
 {
   "name": "crab-buddy",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "A little Claude crab above the prompt: it types on a laptop while Claude works and plays around (weights, jutsu, clones, ball, dancing, naps) when idle. /crab",
   "author": {
     "name": "Karim"
