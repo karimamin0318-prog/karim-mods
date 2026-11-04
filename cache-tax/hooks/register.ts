@@ -571,6 +571,12 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
   return Box({ flexDirection: 'column', children: [...lines, ...choices.map((c, i) => Box({ flexDirection: 'row', children: [press(c, i), Text({ dimColor: true, children: [` ${c.cost ? `${c.cost} · ` : ''}${c.desc}`] })] }))] })
 }
 
+/**
+ * The status icon for a 26px slot: the skins row's context ring is centered 13 in
+ * from the left, so the icon shares its center; a wider view draws the cube smaller.
+ */
+export const bandIcon = (svg: string) => svg.replace('viewBox="0 0 64 64"', 'viewBox="-5.5 -5.5 75 75"')
+
 export const register: Register = on => {
   const s = freshState()
   on('config.set', { key: 'theme' }, async ($, e, next) => {
@@ -612,7 +618,7 @@ export const register: Register = on => {
     const asset = statusIcons[s.light ? 'light' : 'dark'][state === 'warm' || state === 'cold' ? state : 'neutral']
     const icon = s.noColor ? Text({ bold: true, children: ['[>]'] })
       : e.surface === 'terminal' ? $.ui.resolve(e).Image({ source: { png: asset.png }, columns: 3, rows: 1, alt: '[>]' })
-      : e.surface === 'desktop' ? $.ui.resolve(e).Svg({ source: asset.svg, width: 18, height: 18, alt: 'Cache Tax' })
+      : e.surface === 'desktop' ? $.ui.resolve(e).Svg({ source: bandIcon(asset.svg), width: 26, height: 26, alt: 'Cache Tax' })
       : Text({ color, bold: true, children: ['[>]'] })
     return Box({ flexDirection: 'column', children: [
       rest,

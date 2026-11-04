@@ -4,7 +4,7 @@ import type { CommandRunInput, ConfigSetInput, ModelForkResult, On, PromptSubmit
 
 import { busyCard, tileColors } from '../hooks/hold'
 import { statusIcons } from '../hooks/status-icons'
-import { condense, fmtDuration, freshState, handoff, parseDuration, resetForClear, seedFromResume } from '../hooks/register'
+import { bandIcon, condense, fmtDuration, freshState, handoff, parseDuration, resetForClear, seedFromResume } from '../hooks/register'
 
 tier('user')
 
@@ -137,7 +137,7 @@ describe('cache indicator', () => {
       await $.command.run(run('keepwarm', '3h every 90m'))
       const ui = await $.ui.mount({ plugin: 'cache-tax', surface, component: 'AbovePrompt', props: bandProps })
       const type = surface === 'terminal' ? 'Image' : 'Svg'
-      const source = (variant: typeof statusIcons.dark) => surface === 'terminal' ? { png: variant.neutral.png } : variant.neutral.svg
+      const source = (variant: typeof statusIcons.dark) => surface === 'terminal' ? { png: variant.neutral.png } : bandIcon(variant.neutral.svg)
       expect((await ui.find({ type }))?.props.source).toEqual(source(statusIcons.dark))
       expect((await ui.find({ type }))?.props.alt).toBe(surface === 'terminal' ? '[>]' : 'Cache Tax')
       if (surface === 'terminal') {
@@ -145,10 +145,10 @@ describe('cache indicator', () => {
         expect((await ui.find({ type }))?.props.rows).toBe(1)
       }
       await $.turn.complete(turn())
-      expect((await ui.find({ type }))?.props.source).toEqual(surface === 'terminal' ? { png: statusIcons.dark.warm.png } : statusIcons.dark.warm.svg)
+      expect((await ui.find({ type }))?.props.source).toEqual(surface === 'terminal' ? { png: statusIcons.dark.warm.png } : bandIcon(statusIcons.dark.warm.svg))
       await $.config.set(themeChange('light'))
       await clock.advance(HOUR)
-      expect((await ui.find({ type }))?.props.source).toEqual(surface === 'terminal' ? { png: statusIcons.light.cold.png } : statusIcons.light.cold.svg)
+      expect((await ui.find({ type }))?.props.source).toEqual(surface === 'terminal' ? { png: statusIcons.light.cold.png } : bandIcon(statusIcons.light.cold.svg))
       expect((await ui.find({ type: 'Text', text: /^cold$/ }))?.props.color).toBe('#c15f3c')
       expect(w.forks.length).toBe(0)
       await $.command.run(run('keepwarm', 'off'))

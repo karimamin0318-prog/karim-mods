@@ -77,7 +77,7 @@ function style(still: boolean, extra = ''): string {
 function cube(x: number, y: number, size: number, lid: string, edge: string): string {
   const k = size / 64
   return `<g transform="translate(${x} ${y}) scale(${k})" stroke="${edge}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
-<path fill="${lid}" d="M8 18 32 5 56 18 32 31Z"/><path d="M8 18v28l24 13 24-13V18M32 31v28"/><path d="m40 32 8 5-8 5"/></g>`
+<path fill="${lid}" d="M8 18 32 5 56 18 32 31Z"/><path d="M8 18v28l24 13 24-13V18M32 31v28"/><path stroke-width="3.6" d="M40.6 34.4 47.4 38.1 40.6 45.4"/></g>`
 }
 
 const HEAD_H = 74
