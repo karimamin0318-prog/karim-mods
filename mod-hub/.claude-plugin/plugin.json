@@ -1,6 +1,6 @@
 {
   "name": "mod-hub",
-  "version": "0.3.5",
+  "version": "0.3.10",
   "description": "One panel for all your mods: open their views, run their commands, turn them on or off. A Mods button above the prompt, or /mods.",
   "author": {
     "name": "Karim"

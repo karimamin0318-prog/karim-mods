@@ -217,7 +217,7 @@ function panel($: EngineInterface, hub: Hub, e: RenderInput<'Pane'>) {
   return Box({ flexDirection: 'column', gap: 1, children: [head, ...notes, ...hub.mods.map(m => modCard($, hub, e, m))] })
 }
 
-type Node = { type?: string; props?: { key?: unknown; label?: unknown; flexGrow?: unknown }; children?: unknown }
+type Node = { type?: string; props?: { key?: unknown; label?: unknown; flexGrow?: unknown; source?: unknown; [k: string]: unknown }; children?: unknown }
 
 const isCompact = (x: unknown) => {
   const n = x as Node | null
@@ -232,9 +232,9 @@ const isSpacer = (x: unknown) => {
 /**
  * Another mod's band tree with `extra` put right after its Compact button, or, while
  * that button hides (a turn is running), at the end of the row it sits in; undefined
- * when the tree has neither. Copies only the path it changes.
+ * when the tree has neither. `fixRow` reshapes that row. Copies only the path it changes.
  */
-export function besideCompact<T>(tree: T, extra: unknown): T | undefined {
+export function besideCompact<T>(tree: T, extra: unknown, fixRow: (row: Node) => Node = row => row): T | undefined {
   const walk = (x: unknown, test: (y: unknown) => boolean, atEnd: boolean): unknown => {
     if (Array.isArray(x)) {
       const i = x.findIndex(test)
@@ -249,10 +249,33 @@ export function besideCompact<T>(tree: T, extra: unknown): T | undefined {
     if (!n || typeof n !== 'object' || n.children === undefined) return undefined
     const kids = n.children
     const sub = Array.isArray(kids) ? walk(kids, test, atEnd) : walk([kids], test, atEnd)
-    return sub === undefined ? undefined : { ...n, children: sub }
+    if (sub === undefined) return undefined
+    const isRow = (Array.isArray(kids) ? kids : [kids]).some(test)
+    return isRow ? fixRow({ ...n, children: sub }) : { ...n, children: sub }
   }
   return (walk(tree, isCompact, false) ?? walk(tree, isSpacer, true)) as T | undefined
 }
+
+/**
+ * The skins meters with the empty strip above their ring cut off, set at the row's
+ * top: the ring then sits as far from the band's top as from its side. Anything
+ * else, or a meter picture of another shape, stays as it is.
+ */
+export function meterToCorner(x: unknown): unknown {
+  const n = x as Node | null
+  const source = n?.props?.source
+  if (n?.type !== 'Svg' || typeof source !== 'string') return x
+  const cropped = source.replace(/ height="30" viewBox="0 0 (\d+) 30"/, ' height="21" viewBox="0 4.5 $1 21"')
+  if (cropped === source) return x
+  return { type: 'Box', props: { alignSelf: 'flex-start' }, children: [{ ...n, props: { ...n.props, source: cropped, height: 21 } }] }
+}
+
+/** The skins row keeps room for the terminal's [-]; the desktop has none, so its row reaches the band's edge. */
+const toDesktopCorners = (row: Node): Node => ({
+  ...row,
+  props: { ...row.props, paddingRight: 0 },
+  children: Array.isArray(row.children) ? row.children.map(meterToCorner) : row.children,
+})
 
 export const register: Register = on => {
   const hub: Hub = { mods: [], commands: [], loading: false, error: '', changed: new Set(), busy: '' }
@@ -272,7 +295,8 @@ export const register: Register = on => {
     const { Box, Button } = $.ui.resolve(e)
     const mods = Button({ key: 'mh-open', label: '⚙', dimColor: true, onPress: () => void togglePane($, hub) })
     // Beside the skins mod's Compact button when its row is in the band; a row of its own otherwise.
-    return besideCompact(rest, mods) ?? Box({ flexDirection: 'column', children: [
+    const placed = besideCompact(rest, mods, e.surface === 'desktop' ? toDesktopCorners : undefined)
+    return placed ?? Box({ flexDirection: 'column', children: [
       rest,
       Box({ flexDirection: 'row', justifyContent: 'flex-end', children: [mods] }),
     ] })

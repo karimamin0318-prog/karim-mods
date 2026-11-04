@@ -192,7 +192,8 @@ export function condense(rows: readonly SessionMessage[], limit = NOTE_CHARS): s
 
 /** What the new chat starts with after "Clear with a note". */
 export function handoff(note: string, text: string): string {
-  return `Handoff note from my previous chat (written by cache-tax before /clear):\n\n${note}\n\n---\n\n${text}`
+  const head = `Handoff note from my previous chat (written by cache-tax before /clear):\n\n${note}`
+  return text ? `${head}\n\n---\n\n${text}` : head
 }
 
 type View = 'choose' | 'confirm' | 'busy'
@@ -415,6 +416,26 @@ async function writeNote($: EngineInterface): Promise<string> {
 
 const why = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
+/** /cache-tax clear: like "Clear with a note" on the card, without a held message. */
+async function clearWithNote($: EngineInterface, text: string) {
+  let note: string
+  try {
+    note = await writeNote($)
+  } catch (err) {
+    // Nothing is cleared without a note.
+    $.ui.toast(`cache-tax: no note, nothing cleared. ${why(err)}`)
+    return
+  }
+  try {
+    await $.command.run({ command: 'clear' })
+  } catch (err) {
+    await $.prompt.fill({ text: handoff(note, text) }).catch(() => undefined)
+    $.ui.toast(`cache-tax: could not clear (${why(err)}). The note is in the prompt box.`)
+    return
+  }
+  await $.prompt.submit({ text: handoff(note, text), asUser: true })
+}
+
 /** Runs one choice from the card. */
 async function choose($: EngineInterface, s: State, id: string) {
   const h = s.held
@@ -493,7 +514,8 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
   // prompt box, presses one at once. Keys carry the step, so each is new.
   const press = (c: Choice, i: number, accent?: string) => Button({
     key: `ct-${view}-${c.id}`,
-    label: `${i + 1}  ${c.title}`,
+    // The desktop's button draws its own hotkey chip; the terminal's shows only the label.
+    label: e.surface === 'desktop' ? c.title : `${i + 1}  ${c.title}`,
     hotkey: String(i + 1),
     onPress: () => void choose($, s, c.id),
     ...(accent ? { hover: { color: accent } } : {}),
@@ -504,7 +526,7 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
     const k = SCALE[s.size]
     const band = Math.max(480, e.props.bodyColumns * PX_PER_COL)
     const W = Math.round(band / k)
-    const head = view === 'confirm' ? confirmCard(W, light, animate, k) : view === 'busy' ? busyCard(s.busy, W, light, animate, k) : headCard(h, W, light, animate, k)
+    const head = view === 'confirm' ? confirmCard(W, light, animate, k) : view === 'busy' ? busyCard(s.busy, W, light, k) : headCard(h, W, light, animate, k)
     // Each choice is a tile in its money color, red the most to green the
     // least: the badge says what it costs, the app's own Button acts, and the
     // whole tile lights under the pointer.
@@ -516,14 +538,17 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
         width: `${100 / Math.min(perRow, choices.length)}%`,
         flexDirection: 'column',
         borderStyle: 'round',
-        borderColor: t.accent,
+        borderColor: t.border,
         backgroundColor: t.bg,
         paddingX: 1,
-        hover: { backgroundColor: t.litBg },
+        paddingY: 1,
+        hover: { backgroundColor: t.litBg, borderColor: t.accent },
         children: [
           ...(c.cost ? [Text({ bold: true, color: t.accent, children: [c.cost] })] : []),
-          press(c, i, t.accent),
           Text({ dimColor: true, children: [c.desc] }),
+          // Takes up what a shorter text leaves, so the buttons of a row stand on one line.
+          Box({ flexGrow: 1 }),
+          Box({ marginTop: 1, children: [press(c, i, t.accent)] }),
         ],
       })
     }
@@ -531,7 +556,8 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
     for (let i = 0; i < choices.length; i += perRow) {
       rows.push(Box({ flexDirection: 'row', gap: 1, children: choices.slice(i, i + perRow).map((c, j) => tile(c, i + j)) }))
     }
-    return Box({ flexDirection: 'column', gap: 1, children: [Box({ key: `ct-head-${view}`, width: '100%', children: [Svg({ source: head.source, alt: head.alt })] }), ...rows] })
+    // The margin leaves the row above the band (the context ring, Compact) as much room below as above.
+    return Box({ flexDirection: 'column', gap: 1, marginTop: 1, children: [Box({ key: `ct-head-${view}`, width: '100%', children: [Svg({ source: head.source, alt: head.alt })] }), ...rows] })
   }
   const accent = (t: Choice['tone']) => (s.noColor ? undefined : tileColors(t, light).accent)
   const lines = view === 'confirm'
@@ -590,7 +616,8 @@ export const register: Register = on => {
       : Text({ color, bold: true, children: ['[>]'] })
     return Box({ flexDirection: 'column', children: [
       rest,
-      Box({ flexDirection: 'row', alignItems: 'center', children: [
+      // On the desktop, some air under the row above the band (the context ring, Compact).
+      Box({ flexDirection: 'row', alignItems: 'center', ...(e.surface === 'desktop' ? { marginTop: 1 } : {}), children: [
         Box({ flexShrink: 0, children: [icon] }),
         Text({ children: [
           ' cache-tax · ',
@@ -628,8 +655,8 @@ export const register: Register = on => {
     })
     await $.command.register({
       name: 'cache-tax',
-      description: 'Prompt cache state, cold price and this session\'s cold writes; preview shows the hold card; guard warn|refuse (cache-tax)',
-      argumentHint: '[status | preview | size small|medium|large | guard warn | guard refuse]',
+      description: 'Prompt cache state, cold price and this session\'s cold writes; preview shows the hold card; clear starts a new chat with a handoff note; guard warn|refuse (cache-tax)',
+      argumentHint: '[status | preview | clear [message] | size small|medium|large | guard warn | guard refuse]',
       immediate: true,
     })
     // The hook form of cache-tax ships a /cache-tax:status skill; both installed means two guards.
@@ -712,6 +739,13 @@ export const register: Register = on => {
       s.held = hold(s, 'This is a preview, nothing is sent.', now, true)
       show($, s, 'choose')
       return { text: 'Showing the hold card above the prompt box. Its choices only say what they would do.' }
+    }
+    if (words[0] === 'clear') {
+      if (s.held && !s.held.isPreview) return { text: 'a message of yours is on hold; its card has "Clear with a note"' }
+      const text = String(e.args ?? '').trim().replace(/^clear\s*/, '')
+      // The host refuses /clear from inside a command.run hook, so it runs once this one has answered.
+      $.clock.after(0, () => { void clearWithNote($, text) })
+      return { text: 'writing a handoff note, then starting a new chat with it…' }
     }
     if (words[0] === 'guard') {
       if (words[1] !== 'warn' && words[1] !== 'refuse') return { text: '/cache-tax guard takes warn or refuse' }

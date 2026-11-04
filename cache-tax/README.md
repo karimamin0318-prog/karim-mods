@@ -16,6 +16,7 @@ After an hour without a message, Claude's prompt cache goes cold and the next me
 ```
 /cache-tax                    status card
 /cache-tax preview            show the hold card (the choices only say what they would do)
+/cache-tax clear [message]    new chat that starts with a handoff note (and your message)
 /cache-tax size small|medium|large   small is the default; bigger sizes may need scrolling
 /cache-tax guard warn|refuse  refuse = hold on the card (default), warn = only show the price
 /keepwarm [6h | 90m | always | off | status]

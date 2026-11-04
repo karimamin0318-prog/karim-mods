@@ -32,11 +32,18 @@ const TONE: Record<Tone, { fg: string; bg: string; fgLight: string; bgLight: str
 
 const tone = (t: Tone, light: boolean) => (light ? { fg: TONE[t].fgLight, bg: TONE[t].bgLight } : TONE[t])
 
-/** A choice tile's colors: its accent (border, badge) and its tinted background, at rest and under the pointer. */
+/** `a` blended into `b`, both #rrggbb: all of `a` at 1, all of `b` at 0. */
+function mix(a: string, b: string, amount: number): string {
+  const part = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
+  const channel = (i: number) => Math.round(part(a, i) * amount + part(b, i) * (1 - amount)).toString(16).padStart(2, '0')
+  return `#${channel(0)}${channel(1)}${channel(2)}`
+}
+
+/** A choice tile's colors: its accent (badge, border when lit), its quieter border at rest, and its background at rest and under the pointer. */
 export function tileColors(t: Tone, light: boolean) {
   const c = tone(t, light)
   const p = light ? LIGHT : DARK
-  return { accent: c.fg, bg: p.card, litBg: c.bg }
+  return { accent: c.fg, border: mix(c.fg, p.card, 0.55), bg: p.card, litBg: c.bg }
 }
 
 const esc = (s: string): string =>
@@ -97,7 +104,7 @@ export function headCard(h: Held, width: number, light: boolean, animate: boolea
 <rect x="${x}" y="56" width="${barW}" height="4" rx="2" fill="${p.track}"/>
 <rect class="grow" style="animation-delay:${delay}s" x="${x}" y="56" width="${Math.max(4, barW * ratio)}" height="4" rx="2" fill="${fill}"/>`
   const body = `<g class="pop">
-<rect x="1.5" y="1.5" width="${W - 3}" height="${HEAD_H - 3}" rx="12" fill="${p.card}" stroke="${p.stroke}" stroke-width="1.4"/>
+<rect x=".7" y=".7" width="${W - 1.4}" height="${HEAD_H - 1.4}" rx="12" fill="${p.card}" stroke="${p.stroke}" stroke-width="1.4"/>
 ${cube(16, 19, 34, o.fg, p.title)}
 <text x="62" y="23" font-size="11" font-weight="700" letter-spacing="1.4" fill="${o.fg}">CACHE TAX</text>
 <text x="62" y="43" font-size="17" font-weight="650" fill="${p.title}">${esc(fit('Your message is on hold', 17, left))}</text>
@@ -116,12 +123,13 @@ export function confirmCard(width: number, light: boolean, animate: boolean, k =
   const r = tone('red', light)
   const W = Math.max(480, Math.round(width))
   const room = W - 62 - 16
-  const H = 90
   const lines = wrap("This chat's history will be cleared; your files stay. A handoff note and your message carry over.", 12.5, room, 2)
+  const H = HEAD_H + (lines.length - 1) * 16
+  const cy = H / 2
   const body = `<g class="pop">
-<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="12" fill="${p.card}" stroke="${r.fg}" stroke-opacity=".6" stroke-width="1.4"/>
-<circle cx="33" cy="45" r="17" fill="${r.bg}"/>
-<path d="M33 36v11" stroke="${r.fg}" stroke-width="2.4" stroke-linecap="round"/><circle cx="33" cy="53" r="1.7" fill="${r.fg}"/>
+<rect x=".7" y=".7" width="${W - 1.4}" height="${H - 1.4}" rx="12" fill="${p.card}" stroke="${r.fg}" stroke-opacity=".6" stroke-width="1.4"/>
+<circle cx="33" cy="${cy}" r="17" fill="${r.bg}"/>
+<path d="M33 ${cy - 9}v11" stroke="${r.fg}" stroke-width="2.4" stroke-linecap="round"/><circle cx="33" cy="${cy + 8}" r="1.7" fill="${r.fg}"/>
 <text x="62" y="23" font-size="11" font-weight="700" letter-spacing="1.4" fill="${r.fg}">START A NEW CHAT?</text>
 <text x="62" y="43" font-size="17" font-weight="650" fill="${p.title}">Are you sure?</text>
 ${lines.map((l, i) => `<text x="62" y="${62 + i * 16}" font-size="12.5" fill="${p.dim}">${esc(l)}</text>`).join('\n')}
@@ -129,22 +137,25 @@ ${lines.map((l, i) => `<text x="62" y="${62 + i * 16}" font-size="12.5" fill="${
   return { source: svgDoc(W, H, style(!animate), body, k), alt: "Start a new chat? This chat's history will be cleared; a handoff note and your message carry over." }
 }
 
-/** The card while a choice runs: a spinner and what it is doing. */
-export function busyCard(label: string, width: number, light: boolean, animate: boolean, k = 1): { source: string; alt: string } {
+/**
+ * The card while a choice runs: a spinner and what it is doing. No pop: a new
+ * source restarts the spinner, so the drawing stays the same for a given label.
+ */
+export function busyCard(label: string, width: number, light: boolean, k = 1): { source: string; alt: string } {
   const p = light ? LIGHT : DARK
   const o = tone('orange', light)
   const W = Math.max(480, Math.round(width))
   const H = 52
-  // The spinner turns for as long as the card shows; only the pop is once.
+  const r = 9
+  const turn = 2 * Math.PI * r
+  // A whole circle with a dash, not an arc: its box is centered on the ring, so it turns in place.
   const spin = `.spin{transform-box:fill-box;transform-origin:center;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}`
-  const body = `<g class="pop">
-<rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="12" fill="${p.card}" stroke="${p.stroke}" stroke-width="1.4"/>
-<circle cx="30" cy="26" r="9" fill="none" stroke="${p.track}" stroke-width="3"/>
-<path class="spin" d="M30 17a9 9 0 0 1 9 9" fill="none" stroke="${o.fg}" stroke-width="3" stroke-linecap="round"/>
-<text x="52" y="31" font-size="15" font-weight="600" fill="${p.title}">${esc(fit(label, 15, W - 70))}</text>
-</g>`
-  return { source: svgDoc(W, H, style(!animate, spin), body, k), alt: label }
+  const body = `<rect x=".7" y=".7" width="${W - 1.4}" height="${H - 1.4}" rx="12" fill="${p.card}" stroke="${p.stroke}" stroke-width="1.4"/>
+<circle cx="30" cy="26" r="${r}" fill="none" stroke="${p.track}" stroke-width="3"/>
+<circle class="spin" cx="30" cy="26" r="${r}" fill="none" stroke="${o.fg}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(turn / 4).toFixed(2)} ${((turn * 3) / 4).toFixed(2)}"/>
+<text x="52" y="31" font-size="15" font-weight="600" fill="${p.title}">${esc(fit(label, 15, W - 70))}</text>`
+  return { source: svgDoc(W, H, style(true, spin), body, k), alt: label }
 }
 
 /** `text` broken into at most `max` lines of `room` pixels; the last one ends in an ellipsis when cut. */

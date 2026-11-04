@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 import type { CommandRunInput, On, RenderPropsOf, SessionStartInput } from 'claude-code'
 
-import { actionsOf, besideCompact, blurb, colorOf, parseList } from '../hooks/register'
+import { actionsOf, besideCompact, blurb, colorOf, meterToCorner, parseList } from '../hooks/register'
 
 const session: SessionStartInput = { surface: 'desktop', isInteractive: true, cwd: '/work' }
 const PANE_PROPS = { title: 'Mods', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 60 }, view: {} } as never
@@ -175,5 +175,29 @@ describe('mod-hub band', () => {
 
   test('without a skins row it keeps a row of its own', () => {
     expect(besideCompact({ type: 'Text', children: ['hi'] }, 'x')).toBeUndefined()
+  })
+
+  test('fixRow reshapes the row holding Compact, and only there', () => {
+    const compact = { type: 'Button', props: { key: 'compact' } }
+    const row = { type: 'Box', props: { flexDirection: 'row', paddingRight: 5 }, children: [compact] }
+    const tree = { type: 'Box', props: { flexDirection: 'column', paddingRight: 3 }, children: [row] }
+    expect(besideCompact(tree, 'x', row => ({ ...row, props: { ...row.props, paddingRight: 0 } }))).toEqual({
+      ...tree,
+      children: [{ ...row, props: { flexDirection: 'row', paddingRight: 0 }, children: [compact, 'x'] }],
+    })
+    expect(besideCompact(tree, 'x')?.children[0]?.props.paddingRight).toBe(5)
+  })
+
+  test('the meters lose the empty strip above their ring and sit at the row top', () => {
+    const svg = { type: 'Svg', props: { alt: '14% context', height: 30, source: '<svg xmlns="x" width="396" height="30" viewBox="0 0 396 30"><circle cy="15"/></svg>' } }
+    expect(meterToCorner(svg)).toEqual({
+      type: 'Box',
+      props: { alignSelf: 'flex-start' },
+      children: [{ type: 'Svg', props: { alt: '14% context', height: 21, source: '<svg xmlns="x" width="396" height="21" viewBox="0 4.5 396 21"><circle cy="15"/></svg>' } }],
+    })
+    // Not the picture it knows: left alone.
+    const other = { type: 'Svg', props: { source: '<svg height="40"></svg>' } }
+    expect(meterToCorner(other)).toBe(other)
+    expect(meterToCorner('text')).toBe('text')
   })
 })

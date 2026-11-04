@@ -1,6 +1,6 @@
 {
   "name": "cache-tax",
-  "version": "2.6.1",
+  "version": "2.7.3",
   "description": "Keeps the one-hour prompt cache warm during breaks, and holds a cold send on a card: send anyway, summarize and continue, clear with a handoff note, or cancel. Karim's fork of Karan Bansal's cache-tax.",
   "author": { "name": "Karan Bansal, changes by Karim" },
   "license": "MIT"

@@ -33,7 +33,7 @@ export function tighten(source: string): { source: string; width: number } | und
   const width = x
   const svgOpen = head[0].slice(0, head[0].indexOf('>') + 1)
     .replace(/ width="\d+"/, ` width="${width}"`)
-    .replace(/viewBox="0 0 \d+ /, `viewBox="0 0 ${width} `)
+    .replace(/viewBox="0 ([\d.]+) \d+ /, `viewBox="0 $1 ${width} `)
   return { source: svgOpen + (head[1] ?? '') + items.join('') + '</svg>', width }
 }
 

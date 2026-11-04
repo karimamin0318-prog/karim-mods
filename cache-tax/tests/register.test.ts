@@ -2,6 +2,7 @@ import { describe, expect, mock, test, tier } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { CommandRunInput, ConfigSetInput, ModelForkResult, On, PromptSubmitInput, RenderPropsOf, SessionStartInput, TurnCompleteInput, TurnUsage } from 'claude-code'
 
+import { busyCard, tileColors } from '../hooks/hold'
 import { statusIcons } from '../hooks/status-icons'
 import { condense, fmtDuration, freshState, handoff, parseDuration, resetForClear, seedFromResume } from '../hooks/register'
 
@@ -854,7 +855,7 @@ describe('hold card', () => {
     const first = await $.prompt.submit(prompt('hi'))
     const click = (id: string) => ui.press({ key: `ct-${['yes', 'no'].includes(id) ? 'confirm' : 'choose'}-${id}` })
     const drawn = async () => JSON.stringify(await ui.drawn())
-    return { w, seen, ui, first, click, drawn }
+    return { w, seen, ui, first, click, drawn, clock }
   }
 
   test('a cold send is held on a card with four choices and a pop-in', async ($, on) => {
@@ -925,6 +926,36 @@ describe('hold card', () => {
     expect(w.entered).toEqual([])
     expect(seen.toasts[0]).toMatch(/no note, nothing cleared\. the API call failed \(529\)/)
     expect(await drawn()).toContain('ct-choose-send')
+  })
+
+  test('/cache-tax clear writes a note, clears, and starts over with the note and the message', async ($, on) => {
+    const { w, seen, click, clock } = await cold($, on)
+    await click('cancel')
+    expect((await $.command.run(run('cache-tax', 'clear go on with the chime'))).text).toMatch(/writing a handoff note/)
+    await clock.advance(0)
+    expect(seen.notes).toEqual(['haiku'])
+    expect(seen.clears).toBe(1)
+    expect(w.entered).toEqual([handoff('Goal: the mods.', 'go on with the chime')])
+  })
+
+  test('/cache-tax clear without a message sends the note alone', async ($, on) => {
+    const { w, seen, click, clock } = await cold($, on)
+    await click('cancel')
+    await $.command.run(run('cache-tax', 'clear'))
+    await clock.advance(0)
+    expect(seen.clears).toBe(1)
+    expect(w.entered).toEqual([handoff('Goal: the mods.', '')])
+    expect(w.entered[0]).not.toContain('---')
+  })
+
+  test('/cache-tax clear clears nothing while a message is on hold, or without a note', async ($, on) => {
+    const { seen, click, clock } = await cold($, on, null)
+    expect((await $.command.run(run('cache-tax', 'clear'))).text).toMatch(/on hold/)
+    await click('cancel')
+    await $.command.run(run('cache-tax', 'clear'))
+    await clock.advance(0)
+    expect(seen.toasts.at(-1)).toMatch(/no note, nothing cleared\. the API call failed \(529\)/)
+    expect(seen.clears).toBe(0)
   })
 
   test('summarize compacts, then sends the held message', async ($, on) => {
@@ -1078,10 +1109,12 @@ test('the choice tiles are colored by cost: red the most, green the least, each 
   const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'desktop', component: 'AbovePrompt', props: bandProps })
   await $.command.run(run('cache-tax', 'preview'))
   const tile = async (id: string) => (await ui.find({ key: `ct-tile-choose-${id}` }))?.props
-  expect((await tile('send'))?.borderColor).toBe('#ff7b72')
-  expect((await tile('compact'))?.borderColor).toBe('#e8875f')
-  expect((await tile('clear'))?.borderColor).toBe('#5ee08a')
+  expect((await tile('send'))?.borderColor).toBe(tileColors('red', false).border)
+  expect((await tile('compact'))?.borderColor).toBe(tileColors('orange', false).border)
+  expect((await tile('clear'))?.borderColor).toBe(tileColors('green', false).border)
   const d = JSON.stringify(await ui.drawn())
+  // The desktop's button draws its own digit, so the label has none.
+  expect(d).toContain('"label":"Send anyway"')
   expect(d).toMatch(/\$\d+\.\d\d · most expensive/)
   expect(d).toContain('· cheapest')
   expect(d).toContain('free · nothing sent')
@@ -1098,5 +1131,15 @@ test('the desktop app attaching after session.start brings its theme and drops t
   expect(w.status.at(-1)).toBe(undefined)
   const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'desktop', component: 'AbovePrompt', props: bandProps })
   await $.command.run(run('cache-tax', 'preview'))
-  expect((await ui.find({ key: 'ct-tile-choose-send' }))?.props.borderColor).toBe('#c4382f')
+  expect((await ui.find({ key: 'ct-tile-choose-send' }))?.props.borderColor).toBe(tileColors('red', true).border)
+})
+
+test('the busy spinner turns in place and its drawing never changes for a label', () => {
+  const { source } = busyCard('Writing a handoff note…', 640, false)
+  // A whole circle turns around the ring's center; an arc would turn around its own corner.
+  expect(source).toContain('<circle class="spin" cx="30" cy="26" r="9"')
+  expect(source).not.toContain('<path class="spin"')
+  // No pop to drop later: a changed source would restart the spinner.
+  expect(source).not.toContain('class="pop"')
+  expect(busyCard('Writing a handoff note…', 640, false).source).toBe(source)
 })
