@@ -160,18 +160,16 @@ describe('helpers', () => {
 })
 
 describe('mod-hub band', () => {
-  for (const row of ['compact', 'working'] as const) {
-    test(`the Mods button joins the skins row (${row})`, async ($, on) => {
-      world(on, { skinsRow: row })
-      await $.session.start(session)
-      const band = await $.ui.mount({ plugin: 'mod-hub', surface: 'desktop', component: 'AbovePrompt', props: bandProps })
-      const d = JSON.stringify(await band.drawn())
-      // One row only: the Mods button sits in the same children list as the meters.
-      expect(d).toMatch(row === 'compact' ? /"compact".*"mh-open"/ : /19% context.*"mh-open"/)
-      expect(d).not.toContain('"justifyContent":"flex-end"')
-      expect(await band.find({ key: 'mh-open' })).toBeDefined()
-    })
-  }
+  // Each mod now draws its own band row, and the test kit can't ask for the skins row
+  // by name, so the gear's place in that row is covered through besideCompact below.
+  test('the gear finds its place in a skins-shaped row, whether Compact shows or not', () => {
+    const meters = { type: 'Text', children: ['19% context'] }
+    const spacer = { type: 'Box', props: { flexGrow: 1 } }
+    const compact = { type: 'Button', props: { key: 'compact', label: 'Compact' } }
+    const row = (kids: unknown[]) => ({ type: 'Box', props: { flexDirection: 'column' }, children: [{ type: 'Box', props: { flexDirection: 'row' }, children: kids }] })
+    expect(besideCompact(row([meters, spacer, compact]), 'gear')).toEqual(row([meters, spacer, compact, 'gear']))
+    expect(besideCompact(row([meters, spacer]), 'gear')).toEqual(row([meters, spacer, 'gear']))
+  })
 
   test('without a skins row it keeps a row of its own', () => {
     expect(besideCompact({ type: 'Text', children: ['hi'] }, 'x')).toBeUndefined()

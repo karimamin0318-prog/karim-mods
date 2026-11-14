@@ -556,8 +556,7 @@ function holdCard($: EngineInterface, s: State, e: RenderInput<'AbovePrompt'>, h
     for (let i = 0; i < choices.length; i += perRow) {
       rows.push(Box({ flexDirection: 'row', gap: 1, children: choices.slice(i, i + perRow).map((c, j) => tile(c, i + j)) }))
     }
-    // The margin leaves the row above the band (the context ring, Compact) as much room below as above.
-    return Box({ flexDirection: 'column', gap: 1, marginTop: 1, children: [Box({ key: `ct-head-${view}`, width: '100%', children: [Svg({ source: head.source, alt: head.alt })] }), ...rows] })
+    return Box({ flexDirection: 'column', gap: 1, children: [Box({ key: `ct-head-${view}`, width: '100%', children: [Svg({ source: head.source, alt: head.alt })] }), ...rows] })
   }
   const accent = (t: Choice['tone']) => (s.noColor ? undefined : tileColors(t, light).accent)
   const lines = view === 'confirm'
@@ -622,8 +621,8 @@ export const register: Register = on => {
       : Text({ color, bold: true, children: ['[>]'] })
     return Box({ flexDirection: 'column', children: [
       rest,
-      // On the desktop, some air under the row above the band (the context ring, Compact).
-      Box({ flexDirection: 'row', alignItems: 'center', ...(e.surface === 'desktop' ? { marginTop: 1 } : {}), children: [
+      // Its own row of the band now: the band's gap already sets it off from the context row.
+      Box({ flexDirection: 'row', alignItems: 'center', children: [
         Box({ flexShrink: 0, children: [icon] }),
         Text({ children: [
           ' cache-tax · ',

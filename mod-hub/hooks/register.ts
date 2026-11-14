@@ -40,6 +40,8 @@ type Hub = {
   /** Mods switched in this run, which apply after a restart. */
   changed: Set<string>
   busy: string
+  /** The gear sits in the skins row this session. */
+  inSkins?: boolean
 }
 
 export const nameOf = (id: string) => id.split('@')[0] ?? id
@@ -277,8 +279,13 @@ const toDesktopCorners = (row: Node): Node => ({
   children: Array.isArray(row.children) ? row.children.map(meterToCorner) : row.children,
 })
 
+/** The gear that opens the Mods panel. */
+function gear($: EngineInterface, hub: Hub, e: RenderInput<'AbovePrompt'>) {
+  return $.ui.resolve(e).Button({ key: 'mh-open', label: '⚙', dimColor: true, onPress: () => void togglePane($, hub) })
+}
+
 export const register: Register = on => {
-  const hub: Hub = { mods: [], commands: [], loading: false, error: '', changed: new Set(), busy: '' }
+  const hub: Hub = { mods: [], commands: [], loading: false, error: '', changed: new Set(), busy: '', inSkins: false }
 
   on('session.start', async ($, e, next) => {
     const r = await next(e)
@@ -289,16 +296,26 @@ export const register: Register = on => {
   on('command.run', { command: 'mods' }, async $ => ({ text: await togglePane($, hub) }))
 
   // One small button above the prompt; the panel holds the rest.
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+  // Each mod draws its own row of the band, so the gear joins the skins row from a hook
+  // on that row, and mod-hub's own row shows the gear only while the skins row has no place for it.
+  on('ui.render', { component: 'AbovePrompt', plugin: 'skins' }, async ($, e, next) => {
     const rest = await next(e)
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return rest
-    const { Box, Button } = $.ui.resolve(e)
-    const mods = Button({ key: 'mh-open', label: '⚙', dimColor: true, onPress: () => void togglePane($, hub) })
-    // Beside the skins mod's Compact button when its row is in the band; a row of its own otherwise.
-    const placed = besideCompact(rest, mods, e.surface === 'desktop' ? toDesktopCorners : undefined)
-    return placed ?? Box({ flexDirection: 'column', children: [
+    const placed = besideCompact(rest, gear($, hub, e), e.surface === 'desktop' ? toDesktopCorners : undefined)
+    if ((placed !== undefined) !== hub.inSkins) {
+      hub.inSkins = placed !== undefined
+      $.ui.invalidate('ui.render')
+    }
+    return placed ?? rest
+  })
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const rest = await next(e)
+    if (hub.inSkins || e.surface !== 'terminal' && e.surface !== 'desktop') return rest
+    const { Box } = $.ui.resolve(e)
+    return Box({ flexDirection: 'column', children: [
       rest,
-      Box({ flexDirection: 'row', justifyContent: 'flex-end', children: [mods] }),
+      Box({ flexDirection: 'row', justifyContent: 'flex-end', children: [gear($, hub, e)] }),
     ] })
   })
 
