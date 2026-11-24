@@ -29,6 +29,14 @@
       "name": "crab-buddy",
       "source": "./crab-buddy",
       "description": "A little Claude crab above the prompt: types on a laptop while Claude works, plays around when idle. /crab"
+    },
+    {
+      "name": "skins",
+      "source": {
+        "source": "github",
+        "repo": "hellosverre/claude-skins"
+      },
+      "description": "hellosverre's skins mod (not mine, installed from its own repo): themes, tool cards and the usage band above the prompt with context, 5h and 7d rings. /skin"
     }
   ]
 }
